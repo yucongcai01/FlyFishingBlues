@@ -2,48 +2,74 @@ using UnityEngine;
 
 public class InstructionGamePauser : MonoBehaviour
 {
-    private bool isPaused = false;  // 用于检测游戏是否已暂停
-    public KeyCode resumeKey;  // 公共变量，用于指定恢复游戏的按键
-    public GameObject pauseUI;  // 公共变量，用于指定暂停时显示的UI组件
+    private bool isPaused = false;
+    private bool hasLoggedInvalidSetup = false;
 
-    void OnTriggerEnter(Collider other)
+    public KeyCode resumeKey;
+    public GameObject pauseUI;
+
+    private void OnTriggerEnter(Collider other)
     {
-        // 当检测到触发器碰撞时，激活UI组件并暂停游戏
-        if (!isPaused)
+        // Unity can still dispatch trigger callbacks to disabled behaviours.
+        if (!isActiveAndEnabled)
         {
-            pauseUI.SetActive(true);
-            PauseGame();
+            return;
         }
+
+        if (!HasValidSetup() || isPaused)
+        {
+            return;
+        }
+
+        pauseUI.SetActive(true);
+        PauseGame();
     }
 
-    void PauseGame()
+    private void PauseGame()
     {
-        // 设置游戏暂停
-        Time.timeScale = 0f;  // 暂停游戏，0为暂停，1为正常速度
+        Time.timeScale = 0f;
         isPaused = true;
         Debug.Log("Game Paused");
     }
 
-    void ResumeGame()
+    private void ResumeGame()
     {
-        // 恢复游戏
-        Time.timeScale = 1f;  // 恢复游戏
+        Time.timeScale = 1f;
         isPaused = false;
         Debug.Log("Game Resumed");
 
-        // 将UI组件失活
-        pauseUI.SetActive(false);
+        if (pauseUI != null)
+        {
+            pauseUI.SetActive(false);
+        }
 
-        // 将自身的GameObject失活
         gameObject.SetActive(false);
     }
 
-    void Update()
+    private void Update()
     {
-        // 检测玩家是否同时按下空格键和指定的resumeKey以恢复游戏
         if (isPaused && Input.GetKey(KeyCode.Space) && Input.GetKeyDown(resumeKey))
         {
             ResumeGame();
         }
+    }
+
+    private bool HasValidSetup()
+    {
+        if (pauseUI != null && resumeKey != KeyCode.None)
+        {
+            return true;
+        }
+
+        if (!hasLoggedInvalidSetup)
+        {
+            string missingConfig = pauseUI == null ? "pauseUI" : "resumeKey";
+            Debug.LogWarning(
+                $"InstructionGamePauser on '{gameObject.name}' is missing {missingConfig}, so this trigger will be ignored.",
+                this);
+            hasLoggedInvalidSetup = true;
+        }
+
+        return false;
     }
 }
