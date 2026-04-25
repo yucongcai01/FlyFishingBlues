@@ -83,6 +83,8 @@ public class TCP_Manager : MonoBehaviour
             int bytesRead = networkStream.EndRead(result);
             if (bytesRead > 0)
             {
+                //Debug.Log("Data received: " + bytesRead);
+                Debug.Log("Data: " + Encoding.UTF8.GetString(receiveBuffer, 0, bytesRead));
                 string data = Encoding.UTF8.GetString(receiveBuffer, 0, bytesRead);
                 messageBuilder.Append(data);
 

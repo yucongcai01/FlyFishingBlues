@@ -14,7 +14,7 @@ def main():
         conn, addr = s.accept()
         with conn:
             print(f"Connected with Unity by {addr}")
-            for gesture in gesture_map * 3:
+            for gesture in gesture_map * 2:
                 conn.sendall(gesture.encode())
                 print(f"Sent {gesture} to Unity")
                 time.sleep(1)
