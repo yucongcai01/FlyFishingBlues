@@ -71,7 +71,7 @@ public class SolverDampingController : MonoBehaviour
             float currentLength = rope.restLength;
 
             // ������Ϣ�������ǰ���ӵĳ���
-            Debug.Log($"Current Rope Length: {currentLength}");
+            //Debug.Log($"Current Rope Length: {currentLength}");
 
             // �������ӳ������� damping �� gravity
             UpdateDampingAndGravityBasedOnLength(currentLength);
@@ -123,7 +123,7 @@ public class SolverDampingController : MonoBehaviour
         solver.parameters.damping = castingDamping;
         solver.gravity = new Vector3(solver.gravity.x, castingGravityY, solver.gravity.z);
         solver.PushSolverParameters(); // ǿ�Ƹ��²���
-        Debug.Log($"[IfCastingDamping&Gravity] Damping updated to {castingDamping}, Gravity Y updated to {castingGravityY}");
+        //Debug.Log($"[IfCastingDamping&Gravity] Damping updated to {castingDamping}, Gravity Y updated to {castingGravityY}");
     }
 
     // ͨ�õķ�����Ӧ�� damping �� gravity�������������Ϣ
@@ -132,6 +132,6 @@ public class SolverDampingController : MonoBehaviour
         solver.parameters.damping = setting.damping;
         solver.gravity = new Vector3(solver.gravity.x, setting.gravityY, solver.gravity.z);
         solver.PushSolverParameters(); // ǿ�Ƹ��²���
-        Debug.Log($"[{settingName}] Damping updated to {setting.damping}, Gravity Y updated to {setting.gravityY} for rope length {setting.length}");
+        //Debug.Log($"[{settingName}] Damping updated to {setting.damping}, Gravity Y updated to {setting.gravityY} for rope length {setting.length}");
     }
 }
