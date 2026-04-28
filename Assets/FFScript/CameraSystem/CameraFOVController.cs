@@ -1,52 +1,92 @@
-using UnityEngine;
 using System.Collections.Generic;
+using UnityEngine;
 
 public class CameraFOVController : MonoBehaviour
 {
     [System.Serializable]
     public class AnimationFOVSettings
     {
-        public string animationStateName; // 动画状态名称
-        public float fovIncreaseAmount = 5f; // 视野增加量
-        public float fovSmoothTime = 0.5f; // 视野平滑过渡时间
-        public float maxFOV = 90f; // 最大视野角度
+        public string animationStateName;
+        public float fovIncreaseAmount = 5f;
+        public float fovSmoothTime = 0.5f;
+        public float maxFOV = 90f;
     }
 
-    public Animator characterAnimator; // 角色的Animator组件
-    public List<AnimationFOVSettings> animationFOVSettingsList; // 动画与FOV设置的列表
+    public Animator characterAnimator;
+    public List<AnimationFOVSettings> animationFOVSettingsList;
 
     private Camera targetCamera;
     private Dictionary<int, AnimationFOVSettings> animationSettingsDict;
     private float defaultFOV;
     private float targetFOV;
-    private float fovVelocity = 0f;
-    private int currentAnimationHash = 0;
+    private float fovVelocity;
+    private int currentAnimationHash;
+    private bool missingAnimatorLogged;
+    private bool missingCameraLogged;
 
-    void Start()
+    private void Start()
     {
-        // 获取摄像机组件
-        targetCamera = GetComponent<Camera>();
-        if (targetCamera == null)
+        TryResolveCamera();
+        TryResolveAnimator();
+        InitializeAnimationSettings();
+    }
+
+    private void Update()
+    {
+        if (!TryResolveCamera())
         {
-            Debug.LogError("未在该游戏对象上找到Camera组件。");
             return;
         }
 
-        // 检查是否已指定角色的Animator
-        if (characterAnimator == null)
+        if (animationSettingsDict == null)
         {
-            Debug.LogError("未指定角色的Animator组件。");
+            InitializeAnimationSettings();
+        }
+
+        if (!TryResolveAnimator())
+        {
             return;
         }
 
-        // 保存摄像机的默认FOV
-        defaultFOV = targetCamera.fieldOfView;
+        AnimatorStateInfo stateInfo = characterAnimator.GetCurrentAnimatorStateInfo(0);
+        int currentStateHash = stateInfo.shortNameHash;
+
+        AnimationFOVSettings currentSettings = null;
+        if (animationSettingsDict.TryGetValue(currentStateHash, out currentSettings))
+        {
+            if (currentAnimationHash != currentStateHash)
+            {
+                currentAnimationHash = currentStateHash;
+                targetFOV = Mathf.Min(targetFOV + currentSettings.fovIncreaseAmount, currentSettings.maxFOV);
+                fovVelocity = 0f;
+            }
+        }
+
+        float smoothTime = currentSettings != null ? currentSettings.fovSmoothTime : 0.5f;
+        targetCamera.fieldOfView = Mathf.SmoothDamp(targetCamera.fieldOfView, targetFOV, ref fovVelocity, smoothTime);
+    }
+
+    public void ResetCameraFOV()
+    {
         targetFOV = defaultFOV;
+    }
 
-        // 初始化动画状态哈希值与设置的字典
+    private void InitializeAnimationSettings()
+    {
         animationSettingsDict = new Dictionary<int, AnimationFOVSettings>();
-        foreach (var settings in animationFOVSettingsList)
+
+        if (animationFOVSettingsList == null)
         {
+            return;
+        }
+
+        foreach (AnimationFOVSettings settings in animationFOVSettingsList)
+        {
+            if (settings == null || string.IsNullOrWhiteSpace(settings.animationStateName))
+            {
+                continue;
+            }
+
             int animationHash = Animator.StringToHash(settings.animationStateName);
             if (!animationSettingsDict.ContainsKey(animationHash))
             {
@@ -54,45 +94,104 @@ public class CameraFOVController : MonoBehaviour
             }
             else
             {
-                Debug.LogWarning($"动画状态名称 '{settings.animationStateName}' 重复，已忽略。");
+                Debug.LogWarning($"Duplicate animation state '{settings.animationStateName}' was ignored.", this);
             }
         }
     }
 
-    void Update()
+    private bool TryResolveCamera()
     {
-        if (characterAnimator == null || targetCamera == null) return;
-
-        // 获取当前动画状态信息
-        AnimatorStateInfo stateInfo = characterAnimator.GetCurrentAnimatorStateInfo(0);
-        int currentStateHash = stateInfo.shortNameHash;
-
-        // 检查当前动画是否在列表中
-        if (animationSettingsDict.ContainsKey(currentStateHash))
+        if (targetCamera != null)
         {
-            // 如果当前动画发生变化，更新目标FOV
-            if (currentAnimationHash != currentStateHash)
-            {
-                currentAnimationHash = currentStateHash;
-                AnimationFOVSettings settings = animationSettingsDict[currentStateHash];
-                 
-                // 计算新的目标FOV，确保不超过最大值
-                targetFOV = Mathf.Min(targetFOV + settings.fovIncreaseAmount, settings.maxFOV);
-                // 重置fovVelocity，以免SmoothDamp受之前的速度影响
-                fovVelocity = 0f;
-            }
-        
-        
+            return true;
         }
 
-        // 平滑过渡摄像机的FOV到目标值
-        float smoothTime = animationSettingsDict.ContainsKey(currentStateHash) ? animationSettingsDict[currentStateHash].fovSmoothTime : 0.5f;
-        targetCamera.fieldOfView = Mathf.SmoothDamp(targetCamera.fieldOfView, targetFOV, ref fovVelocity, smoothTime);
+        targetCamera = GetComponent<Camera>();
+        if (targetCamera != null)
+        {
+            defaultFOV = targetCamera.fieldOfView;
+            targetFOV = defaultFOV;
+            missingCameraLogged = false;
+            return true;
+        }
+
+        if (!missingCameraLogged)
+        {
+            Debug.LogError("CameraFOVController could not find a Camera on the same GameObject.", this);
+            missingCameraLogged = true;
+        }
+
+        return false;
     }
 
-    // 如果需要在其他地方重置摄像机的FOV，可以调用此方法
-    public void ResetCameraFOV()
+    private bool TryResolveAnimator()
     {
-        targetFOV = defaultFOV;
+        if (characterAnimator != null)
+        {
+            missingAnimatorLogged = false;
+            return true;
+        }
+
+        characterAnimator = GetComponentInParent<Animator>();
+        if (characterAnimator == null && transform.root != null)
+        {
+            characterAnimator = transform.root.GetComponentInChildren<Animator>(true);
+        }
+
+        if (characterAnimator == null)
+        {
+            GameObject playerObject = null;
+            try
+            {
+                playerObject = GameObject.FindWithTag("Player");
+            }
+            catch (UnityException)
+            {
+            }
+
+            if (playerObject != null)
+            {
+                characterAnimator = playerObject.GetComponentInChildren<Animator>(true);
+            }
+        }
+
+        if (characterAnimator == null)
+        {
+            Animator[] animators = FindObjectsOfType<Animator>(true);
+            foreach (Animator animator in animators)
+            {
+                if (animator != null && animator.runtimeAnimatorController != null && animator.isActiveAndEnabled)
+                {
+                    characterAnimator = animator;
+                    break;
+                }
+            }
+
+            if (characterAnimator == null)
+            {
+                foreach (Animator animator in animators)
+                {
+                    if (animator != null && animator.runtimeAnimatorController != null)
+                    {
+                        characterAnimator = animator;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (characterAnimator != null)
+        {
+            missingAnimatorLogged = false;
+            return true;
+        }
+
+        if (!missingAnimatorLogged)
+        {
+            Debug.LogWarning("CameraFOVController could not resolve an Animator. FOV animation is temporarily disabled.", this);
+            missingAnimatorLogged = true;
+        }
+
+        return false;
     }
 }

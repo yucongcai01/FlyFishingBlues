@@ -29236,7 +29236,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6c4de14a09612644c872a34f8f323bd6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  animator: {fileID: 0}
+  animator: {fileID: 1591637866}
   audioSource: {fileID: 2098683458}
   animationSoundPairs:
   - animationClipName: SwingLeft
@@ -30930,7 +30930,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8365f8f045e5ec24ab4e02ce34c66ab0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  characterAnimator: {fileID: 0}
+  characterAnimator: {fileID: 1591637866}
   animationFOVSettingsList:
   - animationStateName: SwingLeft
     fovIncreaseAmount: 0.5
@@ -31008,7 +31008,7 @@ AudioListener:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2083450277}
-  m_Enabled: 0
+  m_Enabled: 1
 --- !u!20 &2083450282
 Camera:
   m_ObjectHideFlags: 0
