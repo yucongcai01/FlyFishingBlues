@@ -12,6 +12,10 @@ public class SceneLoader : MonoBehaviour
     {
         SceneManager.LoadScene("CuttingDianMan");
     }
+    public void LoadKillFishScene()
+    {
+        SceneManager.LoadScene("KillFishScene");
+    }
     public void DelayLoad()
     {
         Invoke("FishFree", 1.5f);

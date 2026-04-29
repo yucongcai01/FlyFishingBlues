@@ -1,9 +1,11 @@
+using System;
 using System.Collections;
 using UnityEngine;
-using UnityEngine.SceneManagement; // ���� SceneManager �����ռ�
 
 public class FishLanding : MonoBehaviour
 {
+    public event Action FishLanded;
+
     public float activationDelay = 2f; // ����ű�����ӳ�ʱ��
     public GameObject fishStaminaCanvas; // FishStaminaCanvas ���
     public Transform escapePoint; // ������λ��
@@ -18,6 +20,8 @@ public class FishLanding : MonoBehaviour
     private Collider waterSurfaceTriggerCollider; // WaterSurfaceTrigger ����ײ��
     private Collider fishLandPointCollider; // FishLandPoint ����ײ��
     private bool isInWater = false; // ���Ƿ���ˮ��
+
+    private bool hasLanded;
 
     private void Start()
     {
@@ -191,7 +195,7 @@ public class FishLanding : MonoBehaviour
         // �����ж�������Ƿ��� FishLandPoint ������ײ
         if (other == fishLandPointCollider)
         {
-            LoadNextScene();
+            NotifyFishLanded();
         }
     }
 
@@ -205,9 +209,14 @@ public class FishLanding : MonoBehaviour
     }
 
     // ������һ�������ķ���
-    private void LoadNextScene()
+    private void NotifyFishLanded()
     {
-        Debug.Log("Done");
-        SceneManager.LoadScene("Unhook Man");
+        if (hasLanded)
+        {
+            return;
+        }
+
+        hasLanded = true;
+        FishLanded?.Invoke();
     }
 }

@@ -2,52 +2,61 @@ using UnityEngine;
 
 public class AnimationSoundController : MonoBehaviour
 {
-    public Animator animator; // 动画组件
-    public AudioSource audioSource; // 用于播放动画对应音效的音频源组件
+    public Animator animator;
+    public AudioSource audioSource;
 
     [System.Serializable]
     public class AnimationSoundPair
     {
-        public string animationClipName; // 动画剪辑名称
-        public AudioClip soundEffect; // 对应的音效
+        public string animationClipName;
+        public AudioClip soundEffect;
     }
 
-    public AnimationSoundPair[] animationSoundPairs; // 动画和音效的对应数组
+    public AnimationSoundPair[] animationSoundPairs;
+    public AudioClip dragSoundEffect;
+    public AudioSource dragAudioSource;
+    public FishDragLine fishDragLine;
 
-    // 新增部分
-    public AudioClip dragSoundEffect; // Drag音效
-    public AudioSource dragAudioSource; // 用于播放Drag音效的音频源组件
-    public FishDragLine fishDragLine; // 对FishDragLine脚本的引用
+    private string currentClipName = "";
+    private bool missingAnimatorLogged;
+    private bool missingAudioSourceLogged;
 
-    private string currentClipName = ""; // 当前播放的动画剪辑名称
-
-    void Update()
+    private void Update()
     {
-        // 检测动画并播放对应音效
-        AnimatorClipInfo[] clipInfo = animator.GetCurrentAnimatorClipInfo(0);
+        TryResolveAudioSources();
 
+        if (!TryResolveAnimator())
+        {
+            return;
+        }
+
+        AnimatorClipInfo[] clipInfo = animator.GetCurrentAnimatorClipInfo(0);
         if (clipInfo.Length > 0)
         {
             string newClipName = clipInfo[0].clip.name;
-
             if (currentClipName != newClipName)
             {
                 currentClipName = newClipName;
 
-                // 查找匹配的动画剪辑名称
-                foreach (AnimationSoundPair pair in animationSoundPairs)
+                if (animationSoundPairs != null)
                 {
-                    if (pair.animationClipName == newClipName)
+                    foreach (AnimationSoundPair pair in animationSoundPairs)
                     {
-                        audioSource.clip = pair.soundEffect;
-                        audioSource.Play();
-                        break;
+                        if (pair != null && pair.animationClipName == newClipName)
+                        {
+                            if (audioSource != null && pair.soundEffect != null)
+                            {
+                                audioSource.clip = pair.soundEffect;
+                                audioSource.Play();
+                            }
+
+                            break;
+                        }
                     }
                 }
             }
         }
 
-        // 新增部分：检测FishDragLine的布尔变量并播放或停止Drag音效
         if (fishDragLine != null && dragSoundEffect != null && dragAudioSource != null)
         {
             if (fishDragLine.isDragging || fishDragLine.isStruggling)
@@ -58,13 +67,98 @@ public class AnimationSoundController : MonoBehaviour
                     dragAudioSource.Play();
                 }
             }
-            else
+            else if (dragAudioSource.isPlaying)
             {
-                if (dragAudioSource.isPlaying)
+                dragAudioSource.Stop();
+            }
+        }
+    }
+
+    private void TryResolveAudioSources()
+    {
+        if (audioSource == null)
+        {
+            audioSource = GetComponent<AudioSource>();
+            if (audioSource == null)
+            {
+                audioSource = GetComponentInChildren<AudioSource>(true);
+            }
+        }
+
+        if (dragAudioSource == null)
+        {
+            dragAudioSource = audioSource;
+        }
+
+        if (audioSource != null)
+        {
+            missingAudioSourceLogged = false;
+            return;
+        }
+
+        if (!missingAudioSourceLogged)
+        {
+            Debug.LogWarning("AnimationSoundController could not resolve an AudioSource. Animation audio is disabled.", this);
+            missingAudioSourceLogged = true;
+        }
+    }
+
+    private bool TryResolveAnimator()
+    {
+        if (animator != null)
+        {
+            missingAnimatorLogged = false;
+            return true;
+        }
+
+        animator = GetComponentInParent<Animator>();
+        if (animator == null && transform.root != null)
+        {
+            animator = transform.root.GetComponentInChildren<Animator>(true);
+        }
+
+        if (animator == null)
+        {
+            GameObject playerObject = null;
+            try
+            {
+                playerObject = GameObject.FindWithTag("Player");
+            }
+            catch (UnityException)
+            {
+            }
+
+            if (playerObject != null)
+            {
+                animator = playerObject.GetComponentInChildren<Animator>(true);
+            }
+        }
+
+        if (animator == null)
+        {
+            Animator[] animators = FindObjectsOfType<Animator>(true);
+            foreach (Animator candidate in animators)
+            {
+                if (candidate != null && candidate.runtimeAnimatorController != null && candidate.isActiveAndEnabled)
                 {
-                    dragAudioSource.Stop();
+                    animator = candidate;
+                    break;
                 }
             }
         }
+
+        if (animator != null)
+        {
+            missingAnimatorLogged = false;
+            return true;
+        }
+
+        if (!missingAnimatorLogged)
+        {
+            Debug.LogWarning("AnimationSoundController could not resolve an Animator.", this);
+            missingAnimatorLogged = true;
+        }
+
+        return false;
     }
 }

@@ -9,13 +9,16 @@ EditorBuildSettings:
     path: Assets/Scenes/SampleScene.unity
     guid: 99c9720ab356a0642a771bea13969a05
   - enabled: 1
-    path: Assets/Scenes/FFInstructionScene.unity
+    path: Assets/Scenes/InUse/FFInstructionScene.unity
     guid: 2cda990e2423bbf4892e6590ba056729
   - enabled: 1
-    path: Assets/Scenes/FishingScene.unity
+    path: Assets/Scenes/InUse/ChooseCharacter.unity
+    guid: aea4c7739826db44c88d44955ed7806d
+  - enabled: 1
+    path: Assets/Scenes/InUse/FishingScene.unity
     guid: 636c284945290a84ea46f17b8cb90e4d
   - enabled: 1
-    path: Assets/Scenes/LandScene.unity
+    path: Assets/Scenes/InUse/LandScene.unity
     guid: c8d28d0075f1f0f41852550d47e71baf
   - enabled: 1
     path: Assets/Scenes/Unhook.unity
@@ -23,6 +26,9 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/CuttingFish.unity
     guid: 385012da4b821234a92cc6d597bffcfd
+  - enabled: 1
+    path: Assets/Scenes/InUse/KillFishScene.unity
+    guid: fa7d36dc212b465eb71a5494e0da39ec
   - enabled: 1
     path: Assets/Scenes/Unhook Man.unity
     guid: f610f4ec179909e4193241627cfc51a1
