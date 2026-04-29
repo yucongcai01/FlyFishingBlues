@@ -121,4 +121,9 @@ public class TCP_Manager : MonoBehaviour
     {
         CloseConnection();
     }
+
+    public bool TryGetMessage(out string message)
+    {
+        return messageQueue.TryDequeue(out message);
+    }
 }
