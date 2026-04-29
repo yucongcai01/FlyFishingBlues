@@ -3,24 +3,21 @@ using Obi;
 
 public class SolverDampingController : MonoBehaviour
 {
-    // ObiSolver ���
     private ObiSolver solver;
 
-    // Damping ���ýṹ
     [System.Serializable]
     public class DampingSetting
     {
-        [Tooltip("���ӵĳ��ȣ����ڿո������ʱ��Ч��")]
-        public float length; // ���ӳ���
+        [Tooltip("The rope length at which this damping setting should be applied")]
+        public float length;
 
-        [Tooltip("��Ӧ�� damping ֵ")]
-        public float damping; // ��Ӧ�� damping ֵ
+        [Tooltip("The air resistance/drag (damping) value to apply at this rope length")]
+        public float damping;
 
-        [Tooltip("��Ӧ�� Gravity Y ��ֵ")]
-        public float gravityY; // ��Ӧ�� Gravity Y ��ֵ
+        [Tooltip("The downward pull (gravity) value to apply at this rope length")]
+        public float gravityY;
     }
 
-    // ��� damping ���ã��������ӳ��ȣ�
     [Header("Length-Based Damping Settings")]
     public DampingSetting firstDamping;
     public DampingSetting secondDamping;
@@ -28,17 +25,15 @@ public class SolverDampingController : MonoBehaviour
     public DampingSetting fourthDamping;
     public DampingSetting fifthDamping;
 
-    // ���������ȼ���ߵ� IfCastingDampingGravity ���ã����������ӳ��ȣ�
     [Header("Highest Priority Setting (IfCastingDamping&Gravity)")]
-    [Tooltip("���ո��δ������ʱӦ�õ� damping ֵ")]
-    public float castingDamping; // �� damping ֵ
+    [Tooltip("The damping value to apply when casting (spacebar not held)")]
+    public float castingDamping;
 
-    [Tooltip("���ո��δ������ʱӦ�õ� Gravity Y ֵ")]
-    public float castingGravityY; // �� Gravity Y ֵ
+    [Tooltip("The downward pull (gravity) value to apply when casting (spacebar not held)")]
+    public float castingGravityY;
 
     void Start()
     {
-        // ��ȡ ObiSolver ���
         solver = GetComponent<ObiSolver>();
 
         if (solver == null)
@@ -49,36 +44,26 @@ public class SolverDampingController : MonoBehaviour
 
     void Update()
     {
-        // ���û���ҵ� ObiSolver���򲻼���ִ��
         if (solver == null) return;
 
-        // // ���ո���Ƿ񱻰���
         bool isSpacePressed = Input.GetKey(KeyCode.Space);
 
         if (!isSpacePressed)
         {
-            //     // �ո��δ�����£�Ӧ��������ȼ��� damping �� gravity ����
             ApplyCastingDampingAndGravity();
         }
         else
         {
 
-            //     // �ո�������£�����ԭ�еĸ������ӳ��ȿ��� damping �� gravity ���߼�
-            //     // ��ȡ�����ĵ�һ�� ObiRope �ĳ���
             ObiRope rope = GetFirstRope();
             if (rope == null) return;
 
             float currentLength = rope.restLength;
 
-            // ������Ϣ�������ǰ���ӵĳ���
-            //Debug.Log($"Current Rope Length: {currentLength}");
-
-            // �������ӳ������� damping �� gravity
             UpdateDampingAndGravityBasedOnLength(currentLength);
         }
     }
 
-    // ��ȡ��һ�� ObiRope ʵ��
     private ObiRope GetFirstRope()
     {
         foreach (var actor in solver.actors)
@@ -91,10 +76,8 @@ public class SolverDampingController : MonoBehaviour
         return null;
     }
 
-    // �������ӳ��ȸ��� damping �� gravity
     void UpdateDampingAndGravityBasedOnLength(float currentLength)
     {
-        // ƥ�䵱ǰ���ӵĳ��Ȳ����� damping �� gravity
         if (currentLength >= firstDamping.length && currentLength < secondDamping.length)
         {
             ApplyDampingAndGravity(firstDamping, "firstDamping");
@@ -117,21 +100,17 @@ public class SolverDampingController : MonoBehaviour
         }
     }
 
-    // Ӧ��������ȼ��� damping �� gravity ���ã����������ӳ��ȣ�
     void ApplyCastingDampingAndGravity()
     {
         solver.parameters.damping = castingDamping;
         solver.gravity = new Vector3(solver.gravity.x, castingGravityY, solver.gravity.z);
-        solver.PushSolverParameters(); // ǿ�Ƹ��²���
-        //Debug.Log($"[IfCastingDamping&Gravity] Damping updated to {castingDamping}, Gravity Y updated to {castingGravityY}");
+        solver.PushSolverParameters();
     }
 
-    // ͨ�õķ�����Ӧ�� damping �� gravity�������������Ϣ
     void ApplyDampingAndGravity(DampingSetting setting, string settingName)
     {
         solver.parameters.damping = setting.damping;
         solver.gravity = new Vector3(solver.gravity.x, setting.gravityY, solver.gravity.z);
-        solver.PushSolverParameters(); // ǿ�Ƹ��²���
-        //Debug.Log($"[{settingName}] Damping updated to {setting.damping}, Gravity Y updated to {setting.gravityY} for rope length {setting.length}");
+        solver.PushSolverParameters();
     }
 }

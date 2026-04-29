@@ -13,7 +13,7 @@ public class LureFishingController : MonoBehaviour
         animator = GetComponent<Animator>();
         if (animator == null)
         {
-            Debug.LogError("找不到Animator组件！");
+            Debug.LogError("找不到Animator组件");
         }
         else
         {

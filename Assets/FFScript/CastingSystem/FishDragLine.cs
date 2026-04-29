@@ -3,60 +3,58 @@ using Obi;
 
 public class FishDragLine : MonoBehaviour
 {
-    public float dragSpeed = 1f; // 拖动时绳子增长速度
-    public float retrieveSpeed = 1f; // 收回时绳子缩短速度
-    public float struggleSpeed = 1f; // 挣扎时绳子增长速度
-    public float pullSpeed = 1f; // 拉动时绳子缩短速度
+    [Header("Speed Settings")]
+    public float dragSpeed = 1f; // Speed when the fish pulls the line
+    public float retrieveSpeed = 1f; // Speed when the player retrieves the line
+    public float struggleSpeed = 1f; // Speed when the fish struggles
+    public float pullSpeed = 1f; // Speed when the player pulls the line
 
-    private ObiRope rope; // 引用 ObiRope 组件
-    private ObiRopeCursor ropeCursor; // 引用 ObiRopeCursor 组件
-    public bool isDragging = false; // 标记拖动状态
-    public bool isRetrieving = false; // 标记收回状态
-    public bool isStruggling = false; // 标记挣扎状态
-    public bool isPulling = false; // 标记拉动状态
-    private Animator characterAnimator; // 引用角色动画
+    private ObiRope rope;
+    private ObiRopeCursor ropeCursor;
+    [Header("Current States")]
+    public bool isDragging = false;
+    public bool isRetrieving = false;
+    public bool isStruggling = false;
+    public bool isPulling = false;
+    private Animator characterAnimator;
 
     void Start()
     {
-        // 获取 ObiRope 组件
         rope = GetComponent<ObiRope>();
-        // 获取 ObiRopeCursor 组件
         ropeCursor = GetComponent<ObiRopeCursor>();
 
         if (rope == null || ropeCursor == null)
         {
-            Debug.LogError("未找到 ObiRope 或 ObiRopeCursor 组件，请确认该脚本附加在 FlyLine 上！");
+            Debug.LogError("FishDragLine: ObiRope or ObiRopeCursor component not found on the GameObject.");
         }
     }
 
     void Update()
     {
-        // 根据不同状态来延长或缩短绳子
+        // If dragging, retrieving, struggling, or pulling, adjust the rope length accordingly
         if (isDragging && rope != null && ropeCursor != null)
         {
-            ExtendRope(dragSpeed); // 拖动绳子
+            ExtendRope(dragSpeed);
         }
         if (isRetrieving && rope != null && ropeCursor != null)
         {
-            ExtendRope(-retrieveSpeed); // 收回绳子
+            ExtendRope(-retrieveSpeed);
         }
         if (isStruggling && rope != null && ropeCursor != null)
         {
-            ExtendRope(struggleSpeed); // 挣扎时绳子增长
+            ExtendRope(struggleSpeed);
         }
         if (isPulling && rope != null && ropeCursor != null)
         {
-            ExtendRope(-pullSpeed); // 拉动绳子
+            ExtendRope(-pullSpeed);
         }
 
-        // 检查“SetTheHook”动画是否正在播放，如果正在播放则停止所有操作
         if (characterAnimator != null && characterAnimator.GetCurrentAnimatorStateInfo(0).IsName("SetTheHook"))
         {
-            StopAllActions(); // 停止所有动作
+            StopAllActions();
         }
     }
 
-    // 拖动绳子
     public void StartDragging()
     {
         isDragging = true;
@@ -67,7 +65,6 @@ public class FishDragLine : MonoBehaviour
         isDragging = false;
     }
 
-    // 收回绳子
     public void StartRetrieving()
     {
         isRetrieving = true;
@@ -78,7 +75,6 @@ public class FishDragLine : MonoBehaviour
         isRetrieving = false;
     }
 
-    // 挣扎
     public void StartStruggling()
     {
         isStruggling = true;
@@ -89,7 +85,6 @@ public class FishDragLine : MonoBehaviour
         isStruggling = false;
     }
 
-    // 拉动绳子
     public void StartPulling()
     {
         isPulling = true;
@@ -100,7 +95,6 @@ public class FishDragLine : MonoBehaviour
         isPulling = false;
     }
 
-    // 停止所有绳子的操作
     public void StopAllActions()
     {
         isDragging = false;
@@ -109,10 +103,10 @@ public class FishDragLine : MonoBehaviour
         isPulling = false;
     }
 
-    // 绳子延长或缩短的逻辑
     private void ExtendRope(float speed)
     {
-        ropeCursor.ChangeLength(speed * Time.deltaTime); // 使用 ObiRopeCursor 来改变绳子的长度
-        Debug.Log("绳子状态变化，当前长度变化: " + speed * Time.deltaTime);
+        // Rope length is changed by the specified speed, multiplied by Time.deltaTime for frame rate independence
+        ropeCursor.ChangeLength(speed * Time.deltaTime);
+        Debug.Log("Rope length changed by: " + speed * Time.deltaTime);
     }
 }
