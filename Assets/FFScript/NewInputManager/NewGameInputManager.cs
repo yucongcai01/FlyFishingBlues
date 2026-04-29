@@ -32,7 +32,7 @@ public class NewGameInputManager : MonoBehaviour
     [SerializeField] private TCP_Manager tcpManager;
 
     [Header("TCP Settings")]
-    [SerializeField] private float tcpComboHoldSeconds = 0.15f;
+    [SerializeField] private float tcpComboHoldSeconds = 0.5f;
 
     public event Action<GameInputAction> ActionPerformed;
     public event Action<GameInputAction> ActionStarted;
@@ -116,6 +116,7 @@ public class NewGameInputManager : MonoBehaviour
         while (tcpManager.TryGetMessage(out message))
         {
             HandleWearableMessage(message.Trim().ToLowerInvariant());
+            Debug.Log($"Received message from wearable: {message}");
         }
     }
 
@@ -123,12 +124,14 @@ public class NewGameInputManager : MonoBehaviour
     {
         switch (message)
         {
-            case "gesture1":
-                Perform(GameInputAction.SwingLeft); // gesture1 = pressSpace + swingLeft
+            case "gesture_1":
+                Debug.Log("Received gesture_1 from wearable: performing PressSpace + SwingLeft combo");
+                PerformTcpSpaceCombo(GameInputAction.SwingLeft); // gesture_1 = pressSpace + swingLeft
                 break;
 
-            case "gesture2":
-                Perform(GameInputAction.SwingRight); // gesture2 = pressSpace + swingRight
+            case "gesture_2":
+                Debug.Log("Received gesture_2 from wearable: performing PressSpace + SwingRight combo");
+                PerformTcpSpaceCombo(GameInputAction.SwingRight); // gesture_2 = pressSpace + swingRight
                 break;
         }
     }
@@ -156,6 +159,7 @@ public class NewGameInputManager : MonoBehaviour
 
     private void Perform(GameInputAction action)
     {
+        Debug.Log($"Perform: {action}");
         ActionPerformed?.Invoke(action);
     }
 

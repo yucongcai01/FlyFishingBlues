@@ -1,8 +1,11 @@
 using UnityEngine;
+using System.Collections;
 
 public class AnglerAnimationController : MonoBehaviour
 {
     private Animator animator;
+
+    [SerializeField] private NewGameInputManager inputManager;
 
     private readonly string PRESSING_SPACE = "PressingSpace";
     private readonly string SWING_LEFT = "SwingLeft";
@@ -10,12 +13,29 @@ public class AnglerAnimationController : MonoBehaviour
     private readonly string RETRIEVE = "Retrieve";
     private readonly string LIFT_ROD = "LiftRod";
     private readonly string SETTHEHOOK = "SetTheHook";
+
     void Start()
     {
         animator = GetComponent<Animator>();
-        if (animator == null)
+        if (inputManager == null)
+            inputManager = FindObjectOfType<NewGameInputManager>();
+
+        if (inputManager != null)
         {
-            Debug.LogError("AnglerAnimationController: No Animator component found on the GameObject.");
+            inputManager.ActionPerformed += OnActionPerformed;
+            Debug.Log("AnglerAnimationController: Subscribed in Start.");
+        }
+        else
+        {
+            Debug.LogError("AnglerAnimationController: No NewGameInputManager found.");
+        }
+    }
+
+    private void OnDisable()
+    {
+        if (inputManager != null)
+        {
+            inputManager.ActionPerformed -= OnActionPerformed;
         }
     }
 
@@ -26,63 +46,65 @@ public class AnglerAnimationController : MonoBehaviour
 
     private void HandleInput()
     {
-        if (animator == null)
+        if (animator == null || inputManager == null)
             return;
 
-        bool isPressingSpace = Input.GetKey(KeyCode.Space);
+        bool isPressingSpace = inputManager.IsHeld(GameInputAction.PressSpace);
         animator.SetBool(PRESSING_SPACE, isPressingSpace);
 
-        if (Input.GetKeyDown(KeyCode.A))
+        bool isLiftingRod = inputManager.IsHeld(GameInputAction.LiftRod);
+        animator.SetBool(LIFT_ROD, isLiftingRod);
+    }
+
+    private void OnActionPerformed(GameInputAction action)
+    {
+        if (animator == null || inputManager == null)
+            return;
+
+        switch (action)
         {
-            Debug.Log("A pressed: swinging left");
-            animator.SetBool(SWING_LEFT, true);
-            StartCoroutine(ResetSwingParameter(SWING_LEFT));
+            case GameInputAction.SwingLeft:
+                Debug.Log("Swinging left");
+                animator.SetBool(SWING_LEFT, true);
+                StartCoroutine(ResetSwingParameter(SWING_LEFT));
+                break;
+
+            case GameInputAction.SwingRight:
+                Debug.Log("Swinging right");
+                animator.SetBool(SWING_RIGHT, true);
+                StartCoroutine(ResetSwingParameter(SWING_RIGHT));
+                break;
+
+            case GameInputAction.Retrieve:
+                if (!inputManager.IsHeld(GameInputAction.PressSpace))
+                {
+                    Debug.Log("Retrieving");
+                    animator.SetTrigger(RETRIEVE);
+                }
+                else
+                {
+                    Debug.Log("Retrieve input while pressing space: not retrieving");
+                }
+                break;
+
+            case GameInputAction.SetHook:
+                if (animator.GetBool("FishOn"))
+                {
+                    Debug.Log("Set the hook");
+                    animator.SetTrigger(SETTHEHOOK);
+                }
+                break;
         }
-
-        if (Input.GetKeyDown(KeyCode.D))
-        {
-            Debug.Log("D pressed: swinging right");
-            animator.SetBool(SWING_RIGHT, true);
-            StartCoroutine(ResetSwingParameter(SWING_RIGHT));
-        }
-
-        if (Input.GetKeyDown(KeyCode.S))
-        {
-            if (!isPressingSpace)
-            {
-                Debug.Log("S pressed: retrieving");
-                animator.SetTrigger(RETRIEVE);
-            }
-            else
-            {
-                Debug.Log("S pressed while pressing space: not retrieving");
-            }
-        }
-
-
-        if (Input.GetKeyDown(KeyCode.W) && animator.GetBool("FishOn"))
-        {
-            animator.SetTrigger(SETTHEHOOK);
-        }
-
-        if (Input.GetKey(KeyCode.A))
-        {
-            animator.SetBool(LIFT_ROD, true);
-        }
-
-
-        if (Input.GetKeyUp(KeyCode.A))
-        {
-            animator.SetBool(LIFT_ROD, false);
-        }
-
-
     }
 
     private System.Collections.IEnumerator ResetSwingParameter(string parameter)
     {
         yield return new WaitForSeconds(0.5f);
-        animator.SetBool(parameter, false);
+
+        if (animator != null)
+        {
+            animator.SetBool(parameter, false);
+        }
     }
 
     public void OnAnimationEnd(string parameter)
