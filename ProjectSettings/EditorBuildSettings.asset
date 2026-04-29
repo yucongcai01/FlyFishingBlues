@@ -18,7 +18,7 @@ EditorBuildSettings:
     path: Assets/Scenes/InUse/FishingScene.unity
     guid: 636c284945290a84ea46f17b8cb90e4d
   - enabled: 1
-    path: Assets/Scenes/LandScene.unity
+    path: Assets/Scenes/InUse/LandScene.unity
     guid: c8d28d0075f1f0f41852550d47e71baf
   - enabled: 1
     path: Assets/Scenes/Unhook.unity
