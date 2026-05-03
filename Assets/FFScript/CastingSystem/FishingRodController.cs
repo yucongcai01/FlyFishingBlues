@@ -5,6 +5,7 @@ public class FishingRodController : MonoBehaviour
     public Transform bone1;
     public Transform fishingRod;
     public float rotationSpeed = 10f;
+    [SerializeField] private NewGameInputManager inputManager;
     
     private Animator animator;
     private bool pressingSpace = false;
@@ -14,6 +15,20 @@ public class FishingRodController : MonoBehaviour
     void Start()
     {
         animator = GetComponent<Animator>();
+        if (inputManager == null)
+        {
+            inputManager = FindObjectOfType<NewGameInputManager>();
+        }
+
+        if (inputManager != null)
+        {
+            inputManager.ActionStarted += OnActionStarted;
+        }
+        else
+        {
+            Debug.LogError("FishingRodController: No NewGameInputManager found.");
+        }
+
         // 如果没有手动设置bone1，尝试自动查找
         if (bone1 == null)
         {
@@ -27,23 +42,16 @@ public class FishingRodController : MonoBehaviour
         }
     }
 
+    private void OnDisable()
+    {
+        if (inputManager != null)
+        {
+            inputManager.ActionStarted -= OnActionStarted;
+        }
+    }
+
     void Update()
     {
-        // 检测空格键来切换动画状态
-        if (Input.GetKeyDown(KeyCode.Space))
-        {
-            pressingSpace = !pressingSpace;
-            if (animator != null)
-            {
-                animator.SetBool("PressingSpace", pressingSpace);
-                if (pressingSpace)
-                {
-                    isAnimationFinished = false;
-                    animator.Play("Fishing");
-                }
-            }
-        }
-
         // 检查动画是否结束
         if (animator != null && pressingSpace && !isAnimationFinished)
         {
@@ -54,6 +62,25 @@ public class FishingRodController : MonoBehaviour
             }
         }
         
+    }
+
+    private void OnActionStarted(GameInputAction action)
+    {
+        if (action != GameInputAction.PressSpace)
+        {
+            return;
+        }
+
+        pressingSpace = !pressingSpace;
+        if (animator != null)
+        {
+            animator.SetBool("PressingSpace", pressingSpace);
+            if (pressingSpace)
+            {
+                isAnimationFinished = false;
+                animator.Play("Fishing");
+            }
+        }
     }
 
     // 在动画事件中调用此方法

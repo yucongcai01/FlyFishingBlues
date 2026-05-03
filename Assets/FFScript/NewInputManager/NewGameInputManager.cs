@@ -1,10 +1,7 @@
-using System.Collections;
 using System.Collections.Generic;
-using Cinemachine;
-using Unity.VisualScripting;
-using UnityEngine;
 using System;
-using UnityEngine.Analytics;
+using System.Collections;
+using UnityEngine;
 
 public enum GameInputAction
 {
@@ -41,7 +38,7 @@ public class NewGameInputManager : MonoBehaviour
     private readonly Dictionary<GameInputAction, bool> keyboardHeld = new Dictionary<GameInputAction, bool>();
     private readonly Dictionary<GameInputAction, bool> wearableHeld = new Dictionary<GameInputAction, bool>();
 
-    private Coroutine tcpSpacePulseCoroutine;
+    private readonly Dictionary<GameInputAction, Coroutine> wearablePulseCoroutines = new Dictionary<GameInputAction, Coroutine>();
 
     private void Awake()
     {
@@ -112,6 +109,11 @@ public class NewGameInputManager : MonoBehaviour
 
     private void ReadWearableInput()
     {
+        if (tcpManager == null)
+        {
+            return;
+        }
+
         string message;
         while (tcpManager.TryGetMessage(out message))
         {
@@ -133,28 +135,131 @@ public class NewGameInputManager : MonoBehaviour
                 Debug.Log("Received gesture_2 from wearable: performing PressSpace + SwingRight combo");
                 PerformTcpSpaceCombo(GameInputAction.SwingRight); // gesture_2 = pressSpace + swingRight
                 break;
+
+            case "press_space_down":
+            case "space_down":
+                SetHeld(InputDeviceType.Wearable, GameInputAction.PressSpace, true);
+                break;
+
+            case "press_space_up":
+            case "space_up":
+                SetHeld(InputDeviceType.Wearable, GameInputAction.PressSpace, false);
+                break;
+
+            case "lift_rod_down":
+            case "liftrod_down":
+                SetHeld(InputDeviceType.Wearable, GameInputAction.LiftRod, true);
+                break;
+
+            case "lift_rod_up":
+            case "liftrod_up":
+                SetHeld(InputDeviceType.Wearable, GameInputAction.LiftRod, false);
+                break;
+
+            case "press_space":
+            case "space":
+                PulseWearableHeldAction(GameInputAction.PressSpace);
+                break;
+
+            case "lift_rod":
+            case "liftrod":
+                PulseWearableHeldAction(GameInputAction.LiftRod);
+                break;
+
+            case "swing_left":
+            case "swingleft":
+                Perform(GameInputAction.SwingLeft);
+                break;
+
+            case "swing_right":
+            case "swingright":
+            case "grow_line":
+            case "growline":
+                Perform(GameInputAction.SwingRight);
+                break;
+
+            case "retrieve":
+                Perform(GameInputAction.Retrieve);
+                break;
+
+            case "set_hook":
+            case "sethook":
+                Perform(GameInputAction.SetHook);
+                break;
+
+            default:
+                GameInputAction action;
+                if (TryParseActionName(message, out action))
+                {
+                    HandleWearableAction(action);
+                }
+                else
+                {
+                    Debug.LogWarning($"Unknown wearable input message: {message}");
+                }
+                break;
         }
+    }
+
+    private void HandleWearableAction(GameInputAction action)
+    {
+        if (action == GameInputAction.PressSpace || action == GameInputAction.LiftRod)
+        {
+            PulseWearableHeldAction(action);
+            return;
+        }
+
+        Perform(action);
     }
 
     private void PerformTcpSpaceCombo(GameInputAction action)
     {
-        if (tcpSpacePulseCoroutine != null)
-        {
-            StopCoroutine(tcpSpacePulseCoroutine);
-        }
-
-        SetHeld(InputDeviceType.Wearable, GameInputAction.PressSpace, true);
+        PulseWearableHeldAction(GameInputAction.PressSpace);
         Perform(action);
-
-        tcpSpacePulseCoroutine = StartCoroutine(ReleaseTcpSpaceAfterDelay());
     }
 
-    private IEnumerator ReleaseTcpSpaceAfterDelay()
+    private void PulseWearableHeldAction(GameInputAction action)
+    {
+        Coroutine runningPulse;
+        if (wearablePulseCoroutines.TryGetValue(action, out runningPulse) && runningPulse != null)
+        {
+            StopCoroutine(runningPulse);
+        }
+
+        SetHeld(InputDeviceType.Wearable, action, true);
+        wearablePulseCoroutines[action] = StartCoroutine(ReleaseWearableHeldActionAfterDelay(action));
+    }
+
+    private IEnumerator ReleaseWearableHeldActionAfterDelay(GameInputAction action)
     {
         yield return new WaitForSeconds(tcpComboHoldSeconds);
 
-        SetHeld(InputDeviceType.Wearable, GameInputAction.PressSpace, false);
-        tcpSpacePulseCoroutine = null;
+        SetHeld(InputDeviceType.Wearable, action, false);
+        wearablePulseCoroutines.Remove(action);
+    }
+
+    private bool TryParseActionName(string message, out GameInputAction action)
+    {
+        string normalizedMessage = NormalizeActionName(message);
+        foreach (GameInputAction candidate in Enum.GetValues(typeof(GameInputAction)))
+        {
+            if (NormalizeActionName(candidate.ToString()) == normalizedMessage)
+            {
+                action = candidate;
+                return true;
+            }
+        }
+
+        action = GameInputAction.PressSpace;
+        return false;
+    }
+
+    private string NormalizeActionName(string value)
+    {
+        return value.Replace("_", string.Empty)
+            .Replace("-", string.Empty)
+            .Replace(" ", string.Empty)
+            .ToLowerInvariant();
     }
 
     private void Perform(GameInputAction action)

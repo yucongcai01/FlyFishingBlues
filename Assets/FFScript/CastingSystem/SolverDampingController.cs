@@ -4,6 +4,7 @@ using Obi;
 public class SolverDampingController : MonoBehaviour
 {
     private ObiSolver solver;
+    [SerializeField] private NewGameInputManager inputManager;
 
     [System.Serializable]
     public class DampingSetting
@@ -40,13 +41,23 @@ public class SolverDampingController : MonoBehaviour
         {
             Debug.LogError("ObiSolver component not found on this GameObject.");
         }
+
+        if (inputManager == null)
+        {
+            inputManager = FindObjectOfType<NewGameInputManager>();
+        }
+
+        if (inputManager == null)
+        {
+            Debug.LogError("SolverDampingController: No NewGameInputManager found.");
+        }
     }
 
     void Update()
     {
         if (solver == null) return;
 
-        bool isSpacePressed = Input.GetKey(KeyCode.Space);
+        bool isSpacePressed = inputManager != null && inputManager.IsHeld(GameInputAction.PressSpace);
 
         if (!isSpacePressed)
         {

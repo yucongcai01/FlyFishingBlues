@@ -35,6 +35,8 @@ public class LineLengthController : MonoBehaviour
 
     public FishStaminaBar fishStaminaBar;
 
+    [SerializeField] private NewGameInputManager inputManager;
+
     void Start()
     {
         ropeCursor = GetComponent<ObiRopeCursor>();
@@ -60,30 +62,32 @@ public class LineLengthController : MonoBehaviour
                 Debug.LogError("FishStaminaBar component not found in the scene.");
             }
         }
+
+        if (inputManager == null)
+        {
+            inputManager = FindObjectOfType<NewGameInputManager>();
+        }
+
+        if (inputManager != null)
+        {
+            inputManager.ActionPerformed += OnActionPerformed;
+        }
+        else
+        {
+            Debug.LogError("LineLengthController: No NewGameInputManager found.");
+        }
+    }
+
+    private void OnDisable()
+    {
+        if (inputManager != null)
+        {
+            inputManager.ActionPerformed -= OnActionPerformed;
+        }
     }
 
     void Update()
     {
-        // Press D to grow the rope
-        if (Input.GetKeyDown(KeyCode.D) && !isGrowing && !isRetrieving && !isLanding)
-        {
-            targetLength = Mathf.Min(rope.restLength + growthAmount, maxLength);
-            if (targetLength > rope.restLength)
-            {
-                isGrowing = true;
-            }
-        }
-
-        // Press S to retrieve the rope
-        if (Input.GetKeyDown(KeyCode.S) && !isRetrieving && !isGrowing && !isLanding)
-        {
-            targetLength = Mathf.Max(rope.restLength - RetrieveAmount, MinLength);
-            if (targetLength < rope.restLength)
-            {
-                isRetrieving = true;
-            }
-        }
-
         // Check if the "LiftRod" animation is playing to trigger landing
         if (animator != null)
         {
@@ -148,6 +152,48 @@ public class LineLengthController : MonoBehaviour
                 isLanding = false;
                 Debug.Log($"Rope Length after landing: {rope.restLength}");
             }
+        }
+    }
+
+    private void OnActionPerformed(GameInputAction action)
+    {
+        switch (action)
+        {
+            case GameInputAction.SwingRight:
+                StartGrowing();
+                break;
+
+            case GameInputAction.Retrieve:
+                StartRetrieving();
+                break;
+        }
+    }
+
+    private void StartGrowing()
+    {
+        if (isGrowing || isRetrieving || isLanding || rope == null)
+        {
+            return;
+        }
+
+        targetLength = Mathf.Min(rope.restLength + growthAmount, maxLength);
+        if (targetLength > rope.restLength)
+        {
+            isGrowing = true;
+        }
+    }
+
+    private void StartRetrieving()
+    {
+        if (isRetrieving || isGrowing || isLanding || rope == null)
+        {
+            return;
+        }
+
+        targetLength = Mathf.Max(rope.restLength - RetrieveAmount, MinLength);
+        if (targetLength < rope.restLength)
+        {
+            isRetrieving = true;
         }
     }
 }
