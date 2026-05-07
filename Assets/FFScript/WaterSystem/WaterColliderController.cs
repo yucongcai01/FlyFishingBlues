@@ -5,10 +5,13 @@ public class WaterColliderController : MonoBehaviour
 {
     // Reference to the BoxCollider component
     private BoxCollider boxCollider;
+    private NewGameInputManager inputManager;
 
     // Update is called once per frame
     void Start()
     {
+        inputManager = NewGameInputManager.EnsureInstance();
+
         // Get the BoxCollider component attached to this GameObject
         boxCollider = GetComponent<BoxCollider>();
 
@@ -19,7 +22,7 @@ public class WaterColliderController : MonoBehaviour
     void Update()
     {
         // Check if the Space key is being held down
-        if (Input.GetKey(KeyCode.Space))
+        if (IsPressingSpace())
         {
             // Enable the BoxCollider if Space is pressed
             if (!boxCollider.enabled)
@@ -37,5 +40,11 @@ public class WaterColliderController : MonoBehaviour
                 Debug.Log("BoxCollider Disabled");
             }
         }
+    }
+
+    private bool IsPressingSpace()
+    {
+        return Input.GetKey(KeyCode.Space)
+            || (inputManager != null && inputManager.IsHeld(GameInputAction.PressSpace));
     }
 }

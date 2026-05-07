@@ -19,13 +19,29 @@ public class BitePauser : MonoBehaviour
 
     // 防止多次触发冻结
     private bool isFrozen = false;
+    private bool setHookRequested = false;
+    private NewGameInputManager inputManager;
 
     void Start()
     {
+        inputManager = NewGameInputManager.EnsureInstance();
+        if (inputManager != null)
+        {
+            inputManager.ActionPerformed += OnActionPerformed;
+        }
+
         // 在游戏开始时确保所有UI组件处于未激活状态
         if (uiComponent1 != null)
             uiComponent1.SetActive(false);
 // 确保第三个UI组件初始为未激活
+    }
+
+    private void OnDisable()
+    {
+        if (inputManager != null)
+        {
+            inputManager.ActionPerformed -= OnActionPerformed;
+        }
     }
 
     void Update()
@@ -75,7 +91,7 @@ public class BitePauser : MonoBehaviour
         while (true)
         {
             // 检测玩家是否按下W键
-            if (Input.GetKeyDown(KeyCode.W))
+            if (ConsumeSetHookInput())
             {
                 // 恢复游戏时间
                 Time.timeScale = 1f;
@@ -97,5 +113,30 @@ public class BitePauser : MonoBehaviour
             // 等待下一帧
             yield return null;
         }
+    }
+
+    private void OnActionPerformed(GameInputAction action)
+    {
+        if (action == GameInputAction.SetHook)
+        {
+            setHookRequested = true;
+        }
+    }
+
+    private bool ConsumeSetHookInput()
+    {
+        if (Input.GetKeyDown(KeyCode.W))
+        {
+            setHookRequested = false;
+            return true;
+        }
+
+        if (setHookRequested)
+        {
+            setHookRequested = false;
+            return true;
+        }
+
+        return false;
     }
 }

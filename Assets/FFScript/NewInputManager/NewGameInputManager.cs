@@ -21,7 +21,37 @@ public enum InputDeviceType
 
 public class NewGameInputManager : MonoBehaviour
 {
+    [Serializable]
+    private class WearableInputFrame
+    {
+        public string gesture;
+        public int gesture_id = -1;
+        public string gesture_name;
+        public string action;
+    }
+
     public static NewGameInputManager Instance { get; private set; }
+
+    public static NewGameInputManager EnsureInstance()
+    {
+        if (Instance != null)
+        {
+            Instance.EnsureTcpManager();
+            return Instance;
+        }
+
+        NewGameInputManager existingManager = FindObjectOfType<NewGameInputManager>();
+        if (existingManager != null)
+        {
+            Instance = existingManager;
+            existingManager.EnsureTcpManager();
+            return existingManager;
+        }
+
+        GameObject inputManagerObject = new GameObject("NewGameInputManager");
+        inputManagerObject.AddComponent<TCP_Manager>();
+        return inputManagerObject.AddComponent<NewGameInputManager>();
+    }
 
     [Header("Input Settings")]
     [SerializeField] private bool keyboardEnabled = true;
@@ -37,6 +67,13 @@ public class NewGameInputManager : MonoBehaviour
 
     private readonly Dictionary<GameInputAction, bool> keyboardHeld = new Dictionary<GameInputAction, bool>();
     private readonly Dictionary<GameInputAction, bool> wearableHeld = new Dictionary<GameInputAction, bool>();
+    private readonly Dictionary<KeyCode, GameInputAction> keyDownActionMap = new Dictionary<KeyCode, GameInputAction>
+    {
+        { KeyCode.A, GameInputAction.SwingLeft },
+        { KeyCode.D, GameInputAction.SwingRight },
+        { KeyCode.S, GameInputAction.Retrieve },
+        { KeyCode.W, GameInputAction.SetHook },
+    };
 
     private readonly Dictionary<GameInputAction, Coroutine> wearablePulseCoroutines = new Dictionary<GameInputAction, Coroutine>();
 
@@ -44,16 +81,13 @@ public class NewGameInputManager : MonoBehaviour
     {
         if (Instance != null && Instance != this)
         {
+            Instance.EnsureTcpManager();
             Destroy(gameObject);
             return;
         }
         Instance = this;
         DontDestroyOnLoad(gameObject);
-
-        if (tcpManager == null)
-        {
-            Debug.LogError("TCP_Manager reference is not set in NewGameInputManager.");
-        }
+        EnsureTcpManager();
     }
 
     // Update is called once per frame
@@ -89,21 +123,12 @@ public class NewGameInputManager : MonoBehaviour
 
         SetHeld(InputDeviceType.Keyboard, GameInputAction.LiftRod, Input.GetKey(KeyCode.A));
 
-        if (Input.GetKeyDown(KeyCode.A))
+        foreach (KeyValuePair<KeyCode, GameInputAction> mapping in keyDownActionMap)
         {
-            Perform(GameInputAction.SwingLeft);
-        }
-        if (Input.GetKeyDown(KeyCode.D))
-        {
-            Perform(GameInputAction.SwingRight);
-        }
-        if (Input.GetKeyDown(KeyCode.S))
-        {
-            Perform(GameInputAction.Retrieve);
-        }
-        if (Input.GetKeyDown(KeyCode.W))
-        {
-            Perform(GameInputAction.SetHook);
+            if (Input.GetKeyDown(mapping.Key))
+            {
+                PerformKeyboardKeyDown(mapping.Key);
+            }
         }
     }
 
@@ -111,78 +136,123 @@ public class NewGameInputManager : MonoBehaviour
     {
         if (tcpManager == null)
         {
-            return;
+            EnsureTcpManager();
+            if (tcpManager == null)
+            {
+                return;
+            }
         }
 
         string message;
         while (tcpManager.TryGetMessage(out message))
         {
-            HandleWearableMessage(message.Trim().ToLowerInvariant());
+            HandleWearableMessage(message.Trim());
             Debug.Log($"Received message from wearable: {message}");
         }
     }
 
+    private void EnsureTcpManager()
+    {
+        if (tcpManager == null)
+        {
+            tcpManager = GetComponent<TCP_Manager>();
+        }
+
+        if (tcpManager == null)
+        {
+            tcpManager = FindObjectOfType<TCP_Manager>();
+        }
+
+        if (tcpManager == null)
+        {
+            tcpManager = gameObject.AddComponent<TCP_Manager>();
+        }
+
+        DontDestroyOnLoad(tcpManager.gameObject);
+    }
+
     private void HandleWearableMessage(string message)
     {
-        switch (message)
+        if (string.IsNullOrEmpty(message))
         {
-            case "gesture_1":
-                Debug.Log("Received gesture_1 from wearable: performing PressSpace + SwingLeft combo");
-                Perform(GameInputAction.SwingLeft); // gesture_1 = pressSpace + swingLeft
+            return;
+        }
+
+        string wearableSignal;
+        if (TryExtractWearableSignal(message, out wearableSignal))
+        {
+            message = wearableSignal;
+        }
+
+        switch (NormalizeActionName(message))
+        {
+            case "gesture1":
+            case "fist":
+            case "gesture1fist":
+                Debug.Log("Received gesture_1/fist from wearable: simulating keyboard A");
+                PerformKeyboardKeyDown(KeyCode.A, true);
                 break;
 
-            case "gesture_2":
-                Debug.Log("Received gesture_2 from wearable: performing PressSpace + SwingRight combo");
-                Perform(GameInputAction.SwingRight); // gesture_2 = pressSpace + swingRight
+            case "gesture3":
+            case "open":
+            case "gesture3open":
+                Debug.Log("Received gesture_3/open from wearable: simulating keyboard D");
+                PerformKeyboardKeyDown(KeyCode.D, true);
                 break;
 
-            case "press_space_down":
-            case "space_down":
+            case "gesture0":
+            case "rest":
+            case "gesture0rest":
+                Debug.Log("Received gesture_0/rest from wearable: no mapped action");
+                break;
+
+            case "gesture2":
+            case "pinch":
+            case "gesture2pinch":
+                Debug.Log("Received gesture_2/pinch from wearable: simulating keyboard W");
+                PerformKeyboardKeyDown(KeyCode.W, true);
+                break;
+
+            case "pressspacedown":
+            case "spacedown":
                 SetHeld(InputDeviceType.Wearable, GameInputAction.PressSpace, true);
                 break;
 
-            case "press_space_up":
-            case "space_up":
+            case "pressspaceup":
+            case "spaceup":
                 SetHeld(InputDeviceType.Wearable, GameInputAction.PressSpace, false);
                 break;
 
-            case "lift_rod_down":
-            case "liftrod_down":
+            case "liftroddown":
                 SetHeld(InputDeviceType.Wearable, GameInputAction.LiftRod, true);
                 break;
 
-            case "lift_rod_up":
-            case "liftrod_up":
+            case "liftrodup":
                 SetHeld(InputDeviceType.Wearable, GameInputAction.LiftRod, false);
                 break;
 
-            case "press_space":
+            case "pressspace":
             case "space":
                 PulseWearableHeldAction(GameInputAction.PressSpace);
                 break;
 
-            case "lift_rod":
             case "liftrod":
                 PulseWearableHeldAction(GameInputAction.LiftRod);
                 break;
 
-            case "swing_left":
             case "swingleft":
-                Perform(GameInputAction.SwingLeft);
+                PerformKeyboardKeyDown(KeyCode.A, true);
                 break;
 
-            case "swing_right":
             case "swingright":
-            case "grow_line":
             case "growline":
-                Perform(GameInputAction.SwingRight);
+                PerformKeyboardKeyDown(KeyCode.D, true);
                 break;
 
             case "retrieve":
                 Perform(GameInputAction.Retrieve);
                 break;
 
-            case "set_hook":
             case "sethook":
                 Perform(GameInputAction.SetHook);
                 break;
@@ -201,6 +271,55 @@ public class NewGameInputManager : MonoBehaviour
         }
     }
 
+    private bool TryExtractWearableSignal(string message, out string signal)
+    {
+        signal = null;
+
+        if (!message.StartsWith("{", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        try
+        {
+            WearableInputFrame frame = JsonUtility.FromJson<WearableInputFrame>(message);
+            if (frame == null)
+            {
+                return false;
+            }
+
+            if (!string.IsNullOrEmpty(frame.action))
+            {
+                signal = frame.action;
+                return true;
+            }
+
+            if (!string.IsNullOrEmpty(frame.gesture))
+            {
+                signal = frame.gesture;
+                return true;
+            }
+
+            if (!string.IsNullOrEmpty(frame.gesture_name))
+            {
+                signal = frame.gesture_name;
+                return true;
+            }
+
+            if (frame.gesture_id >= 0)
+            {
+                signal = $"gesture_{frame.gesture_id}";
+                return true;
+            }
+        }
+        catch (Exception e)
+        {
+            Debug.LogWarning($"Failed to parse wearable JSON message: {e.Message}. Raw message: {message}");
+        }
+
+        return false;
+    }
+
     private void HandleWearableAction(GameInputAction action)
     {
         if (action == GameInputAction.PressSpace || action == GameInputAction.LiftRod)
@@ -210,6 +329,21 @@ public class NewGameInputManager : MonoBehaviour
         }
 
         Perform(action);
+    }
+
+    private void PerformKeyboardKeyDown(KeyCode keyCode, bool simulateHeldState = false)
+    {
+        GameInputAction action;
+        if (keyDownActionMap.TryGetValue(keyCode, out action))
+        {
+            if (simulateHeldState && keyCode == KeyCode.A)
+            {
+                PulseWearableHeldAction(GameInputAction.LiftRod);
+            }
+
+            Debug.Log($"Simulated keyboard key down: {keyCode} -> {action}");
+            Perform(action);
+        }
     }
 
     private void PerformTcpSpaceCombo(GameInputAction action)

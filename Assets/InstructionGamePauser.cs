@@ -4,9 +4,27 @@ public class InstructionGamePauser : MonoBehaviour
 {
     private bool isPaused = false;
     private bool hasLoggedInvalidSetup = false;
+    private NewGameInputManager inputManager;
 
     public KeyCode resumeKey;
     public GameObject pauseUI;
+
+    private void Start()
+    {
+        inputManager = NewGameInputManager.EnsureInstance();
+        if (inputManager != null)
+        {
+            inputManager.ActionPerformed += OnActionPerformed;
+        }
+    }
+
+    private void OnDisable()
+    {
+        if (inputManager != null)
+        {
+            inputManager.ActionPerformed -= OnActionPerformed;
+        }
+    }
 
     private void OnTriggerEnter(Collider other)
     {
@@ -48,9 +66,42 @@ public class InstructionGamePauser : MonoBehaviour
 
     private void Update()
     {
-        if (isPaused && Input.GetKey(KeyCode.Space) && Input.GetKeyDown(resumeKey))
+        if (isPaused && IsPressingSpace() && Input.GetKeyDown(resumeKey))
         {
             ResumeGame();
+        }
+    }
+
+    private void OnActionPerformed(GameInputAction action)
+    {
+        if (isPaused && IsPressingSpace() && DoesActionMatchResumeKey(action))
+        {
+            ResumeGame();
+        }
+    }
+
+    private bool IsPressingSpace()
+    {
+        return Input.GetKey(KeyCode.Space)
+            || (inputManager != null && inputManager.IsHeld(GameInputAction.PressSpace));
+    }
+
+    private bool DoesActionMatchResumeKey(GameInputAction action)
+    {
+        switch (resumeKey)
+        {
+            case KeyCode.A:
+                return action == GameInputAction.SwingLeft;
+            case KeyCode.D:
+                return action == GameInputAction.SwingRight;
+            case KeyCode.S:
+                return action == GameInputAction.Retrieve;
+            case KeyCode.W:
+                return action == GameInputAction.SetHook;
+            case KeyCode.Space:
+                return action == GameInputAction.PressSpace;
+            default:
+                return false;
         }
     }
 

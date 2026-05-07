@@ -7,10 +7,11 @@ public class FishingSceneUI : MonoBehaviour
     public GameObject LeftRight;
     public GameObject SpaceBar;
     public FishBiteHook fishBiteHook;
+    private NewGameInputManager inputManager;
     // Start is called before the first frame update
     void Start()
     {
-        
+        inputManager = NewGameInputManager.EnsureInstance();
     }
 
     // Update is called once per frame
@@ -23,7 +24,7 @@ public class FishingSceneUI : MonoBehaviour
         }
         else
         {
-            if (Input.GetKey(KeyCode.Space))
+            if (IsPressingSpace())
             {
                 LeftRight.SetActive(true);
                 SpaceBar.SetActive(false);
@@ -33,5 +34,11 @@ public class FishingSceneUI : MonoBehaviour
                 LeftRight.SetActive(false);
             }
         }
+    }
+
+    private bool IsPressingSpace()
+    {
+        return Input.GetKey(KeyCode.Space)
+            || (inputManager != null && inputManager.IsHeld(GameInputAction.PressSpace));
     }
 }
