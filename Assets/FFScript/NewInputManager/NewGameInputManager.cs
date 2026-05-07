@@ -28,6 +28,7 @@ public class NewGameInputManager : MonoBehaviour
         public int gesture_id = -1;
         public string gesture_name;
         public string action;
+        public float current_force_smooth;
     }
 
     public static NewGameInputManager Instance { get; private set; }
@@ -61,6 +62,10 @@ public class NewGameInputManager : MonoBehaviour
     [Header("TCP Settings")]
     [SerializeField] private float tcpComboHoldSeconds = 0.5f;
 
+    [Header("Fish Fight Settings")]
+    [SerializeField] private bool wearableForceControlsFishStamina = true;
+    [SerializeField] private float fishPullPulseSeconds = 0.2f;
+
     public event Action<GameInputAction> ActionPerformed;
     public event Action<GameInputAction> ActionStarted;
     public event Action<GameInputAction> ActionEnded;
@@ -76,6 +81,7 @@ public class NewGameInputManager : MonoBehaviour
     };
 
     private readonly Dictionary<GameInputAction, Coroutine> wearablePulseCoroutines = new Dictionary<GameInputAction, Coroutine>();
+    private Coroutine fishPullPulseCoroutine;
 
     private void Awake()
     {
@@ -209,8 +215,8 @@ public class NewGameInputManager : MonoBehaviour
             case "gesture2":
             case "pinch":
             case "gesture2pinch":
-                Debug.Log("Received gesture_2/pinch from wearable: simulating keyboard W");
-                PerformKeyboardKeyDown(KeyCode.W, true);
+                Debug.Log("Received gesture_2/pinch from wearable: simulating keyboard S and pulsing pull");
+                PerformRetrieveAndPulsePull();
                 break;
 
             case "pressspacedown":
@@ -250,7 +256,7 @@ public class NewGameInputManager : MonoBehaviour
                 break;
 
             case "retrieve":
-                Perform(GameInputAction.Retrieve);
+                PerformRetrieveAndPulsePull();
                 break;
 
             case "sethook":
@@ -288,6 +294,8 @@ public class NewGameInputManager : MonoBehaviour
                 return false;
             }
 
+            HandleWearableFrameTelemetry(frame, message.Contains("\"current_force_smooth\""));
+
             if (!string.IsNullOrEmpty(frame.action))
             {
                 signal = frame.action;
@@ -320,6 +328,57 @@ public class NewGameInputManager : MonoBehaviour
         return false;
     }
 
+    private void HandleWearableFrameTelemetry(WearableInputFrame frame, bool hasCurrentForceSmooth)
+    {
+        if (wearableForceControlsFishStamina && hasCurrentForceSmooth && IsGestureOneFistFrame(frame))
+        {
+            ApplyFishStaminaFromWearableForce(frame.current_force_smooth);
+        }
+    }
+
+    private bool IsGestureOneFistFrame(WearableInputFrame frame)
+    {
+        return frame != null
+            && (frame.gesture_id == 1
+                || NormalizeActionName(frame.gesture) == "gesture1"
+                || NormalizeActionName(frame.gesture_name) == "fist"
+                || NormalizeActionName(frame.action) == "swingleft");
+    }
+
+    private void ApplyFishStaminaFromWearableForce(float currentForceSmooth)
+    {
+        if (!IsFishFightActive())
+        {
+            return;
+        }
+
+        FishStaminaBar staminaBar = FishStaminaBar.instance;
+        if (staminaBar == null)
+        {
+            staminaBar = FindObjectOfType<FishStaminaBar>();
+        }
+
+        if (staminaBar == null)
+        {
+            return;
+        }
+
+        staminaBar.ApplyWearableForceSmooth(currentForceSmooth);
+        Debug.Log($"Applied wearable force to fish stamina: current_force_smooth={currentForceSmooth}");
+    }
+
+    private bool IsFishFightActive()
+    {
+        FishBiteHook biteHook = FindObjectOfType<FishBiteHook>();
+        if (biteHook != null && biteHook.isFishBite)
+        {
+            return true;
+        }
+
+        FishLanding fishLanding = FindObjectOfType<FishLanding>();
+        return fishLanding != null && fishLanding.enabled;
+    }
+
     private void HandleWearableAction(GameInputAction action)
     {
         if (action == GameInputAction.PressSpace || action == GameInputAction.LiftRod)
@@ -329,6 +388,46 @@ public class NewGameInputManager : MonoBehaviour
         }
 
         Perform(action);
+    }
+
+    private void PerformRetrieveAndPulsePull()
+    {
+        PerformKeyboardKeyDown(KeyCode.S, true);
+        PulseFishPull();
+    }
+
+    private void PulseFishPull()
+    {
+        if (!IsFishFightActive())
+        {
+            return;
+        }
+
+        FishDragLine fishDragLine = FindObjectOfType<FishDragLine>();
+        if (fishDragLine == null)
+        {
+            return;
+        }
+
+        if (fishPullPulseCoroutine != null)
+        {
+            StopCoroutine(fishPullPulseCoroutine);
+        }
+
+        fishDragLine.StartPulling();
+        fishPullPulseCoroutine = StartCoroutine(StopFishPullAfterDelay(fishDragLine));
+    }
+
+    private IEnumerator StopFishPullAfterDelay(FishDragLine fishDragLine)
+    {
+        yield return new WaitForSecondsRealtime(fishPullPulseSeconds);
+
+        if (fishDragLine != null)
+        {
+            fishDragLine.StopPulling();
+        }
+
+        fishPullPulseCoroutine = null;
     }
 
     private void PerformKeyboardKeyDown(KeyCode keyCode, bool simulateHeldState = false)
@@ -390,6 +489,11 @@ public class NewGameInputManager : MonoBehaviour
 
     private string NormalizeActionName(string value)
     {
+        if (string.IsNullOrEmpty(value))
+        {
+            return string.Empty;
+        }
+
         return value.Replace("_", string.Empty)
             .Replace("-", string.Empty)
             .Replace(" ", string.Empty)

@@ -123,6 +123,22 @@ public class FishStaminaBar : MonoBehaviour
         }
     }
 
+
+    public void ApplyWearableForceSmooth(float currentForceSmooth)
+    {
+        float clampedForce = Mathf.Clamp(currentForceSmooth, 0f, maxStamina);
+        currentStamina = Mathf.Clamp(maxStamina - clampedForce, 0f, maxStamina);
+
+        if (fishStaminaBar != null)
+        {
+            fishStaminaBar.value = currentStamina;
+        }
+
+        if (currentStamina <= 0f && currentRechargeTimes >= rechargeTimes)
+        {
+            DisableStaminaBarUI();
+        }
+    }
     /// <summary>
     /// 禁用耐力条的 UI 组件，使其在游戏中不再显示。
     /// </summary>

@@ -29,13 +29,13 @@ KEY_VIRTUAL_KEYS = {
 
 ACTION_MAP = {
     1: "swingleft",
-    2: "sethook",
+    2: "retrieve",
     3: "swingright",
 }
 
 KEYBOARD_ACTION_KEY_MAP = {
     1: "a",
-    2: "w",
+    2: "s",
     3: "d",
 }
 

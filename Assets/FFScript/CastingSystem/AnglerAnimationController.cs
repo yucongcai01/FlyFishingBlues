@@ -18,7 +18,7 @@ public class AnglerAnimationController : MonoBehaviour
     {
         animator = GetComponent<Animator>();
         if (inputManager == null)
-            inputManager = FindObjectOfType<NewGameInputManager>();
+            inputManager = NewGameInputManager.EnsureInstance();
 
         if (inputManager != null)
         {
