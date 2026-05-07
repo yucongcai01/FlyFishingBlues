@@ -128,12 +128,12 @@ public class NewGameInputManager : MonoBehaviour
         {
             case "gesture_1":
                 Debug.Log("Received gesture_1 from wearable: performing PressSpace + SwingLeft combo");
-                PerformTcpSpaceCombo(GameInputAction.SwingLeft); // gesture_1 = pressSpace + swingLeft
+                Perform(GameInputAction.SwingLeft); // gesture_1 = pressSpace + swingLeft
                 break;
 
             case "gesture_2":
                 Debug.Log("Received gesture_2 from wearable: performing PressSpace + SwingRight combo");
-                PerformTcpSpaceCombo(GameInputAction.SwingRight); // gesture_2 = pressSpace + swingRight
+                Perform(GameInputAction.SwingRight); // gesture_2 = pressSpace + swingRight
                 break;
 
             case "press_space_down":
